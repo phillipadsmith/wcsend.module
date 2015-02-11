@@ -1,0 +1,94 @@
+wcsend Drupal module
+
+
+To use this you need:
+	- perl installed
+	- these perl modules:
+		 - HTML::FormatText::WithLinks
+		 - LWP::UserAgent
+		 - SOAP::Lite
+
+ 	- the two perl scripts should be executable
+
+	- the two perl scripts contain WhatCounts login credentials, which must be up to date
+
+	- to enable the module
+
+	- to assign 'send email via WhatCounts (wcsend module)' permission to the Drupal role who will be
+	   able to send emails out via whatcounts
+
+
+In your theme, put something like this, to insert the link to send the email.  This is a link that, when clicked,
+   will send the contents of the page that it is on.  It will send the version that an anonymous user would see,
+   so the link itself won't be mailed out.
+
+
+
+	<?php  // Show link to send the email via WhatCounts.
+	       //
+	       // For more info on this, see the README for the wcsend module.
+
+		if (user_access('send email via WhatCounts (wcsend module)')) {
+
+
+			printf (
+				<<<END_PRINT
+				    <tr>
+				       <td align="center">
+					  <div style="background-color:yellow; padding:12px;">%s</div>
+				       </td>
+				    </tr>
+
+END_PRINT
+				,
+				l('Send this email now via whatcounts!',
+					sprintf('wcsend/%s/%s',
+					md5($node->path . "secret phrase that won't be guessed"), // If changing secret phrase, change it in wcsend.module too.
+					$node->path )
+				 )
+			);
+
+		}
+	?>
+
+
+In your theme, you also need to put this section.  It contains the parameters for the email send.
+"changetemplate_plain_text" is there as a place-holder, in case someday you set up a special field 
+to contain the plain-text version of the email.  In the meantime, we convert the HTML to plain-text
+programmatically.
+
+Only list_id is required.  If no template_id is specified, it will use (and possibly modify) the default 
+template for the list.  If other parameters are not specified, they will not be modified in the list 
+or in the template.
+
+There are lots of other parameters you can add-- look in the launch_whatcounts_email.pl script for
+the ones you can pass in.
+
+
+	<?php
+	printf (
+		<<<END_PRINT
+	<!--
+	----start wcsend params----
+	  changelist_from_name = %s  # You can put comments in with the '#' symbol.
+	  changelist_from_email = %s
+	  changetemplate_subject = %s
+	  changetemplate_plain_text = %s
+	  segmentation_id = %d
+	  list_id = %d
+	  template_id = %d
+	  format = 99     # -1=subscriber, 1=text, 2=html, 99=Multi-part MIME
+	----end wcsend params----
+	-->
+END_PRINT
+		,
+		$node->field_whatcounts_from_name[0]['view'],
+		$node->field_whatcounts_from_emailaddr[0]['email'],
+		$node->title,
+		"This is not really used at the moment-- we are converting HTML to plain text to get this value",
+		$node->field_wcsend_segmentation_rule[0]['value'],
+		36467,
+		129064
+	);
+	?>
+

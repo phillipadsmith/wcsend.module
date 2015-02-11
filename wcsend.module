@@ -1,0 +1,94 @@
+<?php
+/**
+* Display help and module information
+* @param section which section of the site we're displaying help 
+* @return help text for section
+*/
+function wcsend_help($section='') {
+
+  $output = '';
+
+  switch ($section) {
+    case "admin/help#wcsend":
+      $output = '<p>'.  t("Send an email via WhatCounts.com."). '</p>';
+      break;
+  }
+
+  return $output;
+} 
+
+
+/**
+* Valid permissions for this module
+* @return array An array of valid permissions for the wcsend module
+*/
+function wcsend_perm() {
+  return array('send email via WhatCounts (wcsend module)');
+} 
+
+
+
+/**
+ * Implementation of hook_menu()
+ */
+
+function wcsend_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+    $a = 1;
+
+
+  }
+  else {
+    $items[] = array(
+      'path' => 'wcsend', 
+      'callback' => 'wcsend_send',
+      'type' => 'MENU_CALLBACK',
+      'access' => user_access('send email via WhatCounts (wcsend module)'),
+    );
+  }
+
+  return $items;
+
+}
+
+
+
+// This is where we actually launch the whatcounts campaign.  
+//
+// We first check that the hashcode that has been inserted into the URL is correct for 
+//   the rest of the URL that follows it.  If it matches, then we invoke the 'launch' perl script.
+//
+// The url will be something like http://your_drupal.com/wcsend/2k3h2k3j3u2llBIG_LONG_HASH_CODE2342hsj/the/rest/of/the/path
+//
+// If the hash is correct, then the content of http://your_drupal.com/the/rest/of/the/path will be sent.
+
+function wcsend_send() {
+  $args = func_get_args();
+  $hash = array_shift($args);
+  $rest_of_path = implode('/', $args);
+  
+  // If changing the "secret phrase" here, be sure to change it in node-enewsletter.tpl.php too.
+
+  if ($hash == md5($rest_of_path . "secret phrase that won't be guessed")) {  
+    # (Hash key is correct.)
+
+    global $base_url;
+    $url_of_webpage_to_send_by_email = $base_url . base_path() . $rest_of_path;
+    $full_path_to_emailing_script =
+             $_SERVER['DOCUMENT_ROOT'] . base_path()
+	     . drupal_get_path('module', 'wcsend')
+	     . '/launch_whatcounts_email.pl';
+
+    # Launch the email campaign, with the associated perl script.
+    exec("$full_path_to_emailing_script --url=$url_of_webpage_to_send_by_email", $output, $return);
+
+    print "We attempted to launch the email using whatcounts.com.  The results of that attempt are: '";
+    print implode("\n", $output);
+    print "', and the launch script itself returned '$return'.\n";
+
+  }else{
+    print "Incorrect hash key.  Email has not been sent.";
+  }
+}
